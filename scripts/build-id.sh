@@ -246,6 +246,16 @@ run_git_log_101()
 		fi
 	fi
 
+	if [ -n "${SOURCE_X_GIT_COMMIT_ID:-}" ] ; then
+		set +e
+		commit_id_full="$( echo "${SOURCE_X_GIT_COMMIT_ID}" | grep -E -o '^[0-9a-fA-F]{40}$' )"
+		set -e
+		if [ -z "${commit_id_full}" ] ; then
+			show_error "Invalid SOURCE_X_GIT_COMMIT_ID value"
+			return 1
+		fi
+	fi
+
 	commit_id_abbrev="$( echo "${commit_id_full}" | grep -E -o '^[0-9a-fA-F]{12}'  )"
 	if [ -z "${commit_id_abbrev}" ] ; then
 		show_error "Could not parse abbreviated commit ID"
