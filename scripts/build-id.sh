@@ -43,6 +43,21 @@ unset ITEM_HANDLER_FUNC
 
 unset TOP_LEVEL_DIR
 
+exit_handler()
+{
+	local rv="${1:-120}"
+	set +x
+	set +e
+	if ! [ "${rv}" = 0 ] ; then
+		if [ -n "${OPT_OUT_FILE}" ] ; then
+			rm -f "${OPT_OUT_FILE}"
+		fi
+	fi
+	return "${rv}"
+}
+
+trap 'exit_handler "$?" "$0"' EXIT
+
 show_usage()
 {
 	set +x
@@ -420,6 +435,76 @@ run_item_handler()
 }
 
 ##
+## Replace file_1 with file_2 if different or if file_1 does not exist
+##
+replace_file_if_changed()
+{
+	local file_1="${1}"
+	local file_2="${2}"
+	local file_bak="${1}.$$.bak.tmp"
+	local rv
+
+	if ! [ -e "${file_1}" ] ; then
+		## file_1 does not exist
+		mv "${file_2}" "${file_1}"
+		rm -f "${file_2}"
+		return 0
+	fi
+
+	set +e
+	diff -q "${file_1}" "${file_2}" >/dev/null 2>&1
+	rv=$?
+	set -e
+
+	if [ "$rv" -eq 0 ] ; then
+		## Files are the same, remove file_2
+		rm -f "${file_2}"
+		return 0
+	fi
+
+	if [ "$rv" -eq 1 ] ; then
+		## Files are different, replace file_1 with file_2
+		mv "${file_1}" "${file_bak}"
+		mv "${file_2}" "${file_1}"
+		rm -f "${file_2}"
+		rm -f "${file_bak}"
+		return 0
+	fi
+
+	show_error "Error $rv when comparing \"${file_1}\" and \"${file_2}\""
+	rm -f "${file_1}"
+	rm -f "${file_2}"
+	rm -f "${file_bak}"
+	return 2
+}
+
+
+##
+## Write content to file, if changed
+##
+
+write_content_to_file()
+{
+	local fname
+	local newfile
+
+	fname="${1}"
+	newfile="${1}.$$.new.tmp"
+
+	run_item_handler >"${newfile}"
+	if ! [ -s "${newfile}" ] ; then
+		rm -f "${fname}"
+		rm -f "${newfile}"
+		show_error "Generated empty file"
+		return 1
+	fi
+
+	replace_file_if_changed "${fname}" "${newfile}"
+
+	return $?
+}
+
+##
 ## Main function
 ##
 
@@ -451,7 +536,11 @@ build_id_main()
 		exit 1
 	fi
 
-	run_item_handler
+	if [ -n "${OPT_OUT_FILE}" ] ; then
+		write_content_to_file "${OPT_OUT_FILE}"
+	else
+		run_item_handler
+	fi
 
 	return $?
 }
