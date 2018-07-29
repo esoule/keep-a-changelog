@@ -26,6 +26,7 @@ OPT_ITEM=""
 ## List of possible items
 LIST_ITEMS="
 c-header
+c-header-u-boot-1-2-timestamp
 commit-id
 commit-id-abbrev
 date-epoch
@@ -354,6 +355,26 @@ cat <<__EOF__
 #define _BUILD_DATE_STR_		"${BID_DATE_STR}"
 #define _BUILD_DATE_SAFE_STR_		"${BID_DATE_SAFE_STR}"
 #define _BUILD_COMMIT_ID_		"${BID_COMMIT_ID_ABBREV}"
+__EOF__
+
+	return 0
+}
+
+handler_c_header_u_boot_1_2_timestamp()
+{
+	if ! run_git_log_101 ; then
+		return 1
+	fi
+	if ! run_date_format ; then
+		return 1
+	fi
+
+cat <<__EOF__
+/* Generated file, do not edit */
+/* Generated with build-id.sh c-header-u-boot-1-2-timestamp */
+
+#define U_BOOT_DATE			"${BID_DATE_C_DATE_STR}"
+#define U_BOOT_TIME			"${BID_DATE_C_TIME_STR}"
 __EOF__
 
 	return 0
