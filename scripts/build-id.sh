@@ -33,6 +33,7 @@ date-epoch
 date-safe-str
 date-str
 print-all
+repo-url
 "
 
 LIST_ITEMS="$( echo ${LIST_ITEMS} )"
@@ -40,6 +41,7 @@ LIST_ITEMS="$( echo ${LIST_ITEMS} )"
 unset BID_COMMIT_ID_FULL BID_COMMIT_ID_ABBREV
 unset BID_DATE_EPOCH
 unset BID_DATE_SAFE_STR BID_DATE_STR BID_DATE_C_DATE_STR BID_DATE_C_TIME_STR
+unset BID_REPO_URL
 
 unset ITEM_HANDLER_FUNC
 
@@ -335,6 +337,45 @@ run_date_format()
 }
 
 ##
+## Run git commands to get repository URL
+##
+
+run_git_remote_repo_url()
+{
+	local first_repo_name
+	local repo_url
+
+	if [ "${DONE_RUN_GIT_REMOTE_REPO_URL:-}" ] ; then
+		return 0
+	fi
+
+	## Get the first remote.FOO.url entry in .git/config
+	## it is the one where the repository was likely cloned
+	## It is usually "origin", but not always
+
+	first_repo_name="$( cd "${TOP_LEVEL_DIR}" && \
+			git config --get-regexp 'remote[\.][^\.]+[\.]url' \
+			| head -n 1 | awk '{ print $1 }' \
+			| cut -d '.' -f2 \
+			| grep -E -o '[A-Za-z0-9_-]+' )"
+
+	if [ -z "${first_repo_name}" ] ; then
+		show_error "Could not determine remote name for origin repository"
+		return 1
+	fi
+
+	repo_url="$( cd "${TOP_LEVEL_DIR}" && git remote get-url "${first_repo_name}" )"
+	if [ -z "${repo_url}" ] ; then
+		show_error "Could not determine URL for remote ${first_repo_name}"
+		return 1
+	fi
+
+	BID_REPO_URL="${repo_url}"
+	DONE_RUN_GIT_REMOTE_REPO_URL=y
+	return 0
+}
+
+##
 ## Handlers
 ##
 
@@ -464,6 +505,16 @@ handler_print_all()
 		echo "[${ret_val}]"
 	done
 
+	return 0
+}
+
+handler_repo_url()
+{
+	if ! run_git_remote_repo_url ; then
+		return 1
+	fi
+
+	echo "${BID_REPO_URL}"
 	return 0
 }
 
