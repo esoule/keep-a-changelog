@@ -25,6 +25,8 @@ OPT_ITEM=""
 
 ## List of possible items
 LIST_ITEMS="
+build-info-brief
+build-info-full
 c-header
 c-header-u-boot-1-2-timestamp
 commit-id
@@ -42,10 +44,13 @@ unset BID_COMMIT_ID_FULL BID_COMMIT_ID_ABBREV
 unset BID_DATE_EPOCH
 unset BID_DATE_SAFE_STR BID_DATE_STR BID_DATE_C_DATE_STR BID_DATE_C_TIME_STR
 unset BID_REPO_URL
+unset BID_COMMITTER_NAME BID_COMMIT_SUBJECT
 
 unset ITEM_HANDLER_FUNC
 
 unset TOP_LEVEL_DIR
+
+unset PROJECT_NAME_PREFIX
 
 exit_handler()
 {
@@ -223,6 +228,8 @@ locate_top_level_dir()
 		OPT_PROJECT_NAME="$( basename "${top_dir}" )"
 	fi
 
+	PROJECT_NAME_PREFIX="$( echo "${OPT_PROJECT_NAME^^}" | sed -e 's/[^A-Za-z0-9_]/_/g' )"
+
 	return 0
 }
 
@@ -285,6 +292,58 @@ run_git_log_101()
 	BID_COMMIT_ID_ABBREV="${commit_id_abbrev}"
 	BID_DATE_EPOCH="${date_epoch}"
 	DONE_RUN_GIT_LOG_101=y
+	return 0
+}
+
+sed_filter_value()
+{
+	sed -e "s/[ \\t]\+/ /g; s/[ ]\$//; s/^[ ]//; s/\\\"/'/g; /^$/d;"
+}
+
+##
+## Run git log command to get committer name and commit message (commit subject)
+##
+
+run_git_log_201()
+{
+	local committer_name
+	local commit_subject
+
+	if [ "${DONE_RUN_GIT_LOG_201:-}" ] ; then
+		return 0
+	fi
+
+	if ! run_git_log_101 ; then
+		return 1
+	fi
+
+	set +e
+	committer_name="$( cd "${TOP_LEVEL_DIR}" && TZ=UTC git log -1 --format='tformat:%cN' HEAD )"
+	commit_subject="$( cd "${TOP_LEVEL_DIR}" && TZ=UTC git log -1 --format='tformat:%s' HEAD )"
+	set -e
+
+	if [ -n "${SOURCE_X_GIT_COMMIT_ID:-}" ] ; then
+		## NOTE: SOURCE_X_GIT_COMMIT_ID validity is checked in run_git_log_101
+		committer_name="John Doe"
+		commit_subject="Initial commit"
+	fi
+
+	committer_name="$( echo "${committer_name}" | sed_filter_value )"
+	commit_subject="$( echo "${commit_subject}" | sed_filter_value )"
+
+	if [ -z "${committer_name}" ] ; then
+		show_error "Could not parse committer name"
+		return 1
+	fi
+
+	if [ -z "${commit_subject}" ] ; then
+		show_error "Could not parse commit subject"
+		return 1
+	fi
+
+	BID_COMMITTER_NAME="${committer_name}"
+	BID_COMMIT_SUBJECT="${commit_subject}"
+	DONE_RUN_GIT_LOG_201=y
 	return 0
 }
 
@@ -378,6 +437,65 @@ run_git_remote_repo_url()
 ##
 ## Handlers
 ##
+
+handler_build_info_brief()
+{
+	handler_build_info_full "brief"
+}
+
+handler_build_info_full()
+{
+	local buildinfo_type
+	local build_num
+
+	buildinfo_type="${1:-full}"
+
+	build_num="${BUILD_NUMBER:-123456}"
+	if [ -z "${build_num}" ] ; then
+		show_error "Could not get BUILD_NUMBER"
+		return 1
+	fi
+
+	if ! run_git_log_101 ; then
+		return 1
+	fi
+	if ! run_date_format ; then
+		return 1
+	fi
+
+	if [ "${buildinfo_type}" = full ] ; then
+		if ! run_git_log_201 ; then
+			return 1
+		fi
+		if ! run_git_remote_repo_url ; then
+			return 1
+		fi
+	fi
+
+	cat <<__EOF__
+# Build information for ${OPT_PROJECT_NAME}
+
+${PROJECT_NAME_PREFIX}_BUILD_NUMBER="${build_num}"
+${PROJECT_NAME_PREFIX}_COMMIT_ID="${BID_COMMIT_ID_FULL}"
+${PROJECT_NAME_PREFIX}_COMMITTER_DATE="${BID_DATE_STR}"
+__EOF__
+
+	if [ "${buildinfo_type}" = full ] ; then
+		cat <<__EOF__
+
+${PROJECT_NAME_PREFIX}_REPO_URL="${BID_REPO_URL}"
+${PROJECT_NAME_PREFIX}_COMMITTER_NAME="${BID_COMMITTER_NAME}"
+${PROJECT_NAME_PREFIX}_COMMIT_SUBJECT="${BID_COMMIT_SUBJECT}"
+__EOF__
+	fi
+
+	cat <<__EOF__
+
+#
+__EOF__
+
+	return 0
+}
 
 handler_c_header()
 {
