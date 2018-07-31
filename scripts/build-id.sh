@@ -35,6 +35,7 @@ date-epoch
 date-safe-str
 date-str
 print-all
+project-description
 repo-url
 version-str
 "
@@ -47,6 +48,7 @@ unset BID_DATE_SAFE_STR BID_DATE_STR BID_DATE_C_DATE_STR BID_DATE_C_TIME_STR
 unset BID_REPO_URL
 unset BID_COMMITTER_NAME BID_COMMIT_SUBJECT
 unset BID_VERSION_STR
+unset BID_PROJECT_DESC
 
 unset ITEM_HANDLER_FUNC
 
@@ -55,6 +57,7 @@ unset TOP_LEVEL_DIR
 unset PROJECT_NAME_PREFIX
 
 unset CHANGELOG_FILE
+unset README_FILE
 
 exit_handler()
 {
@@ -494,6 +497,38 @@ find_changelog_file()
 }
 
 ##
+## Find README file in project
+##
+
+find_readme_file()
+{
+	local fname
+
+	if [ -n "${README_FILE:-}" ] ; then
+		return 0
+	fi
+
+	set +e
+	fname="$( find "${TOP_LEVEL_DIR}" -mindepth 1 -maxdepth 1 -type f \
+				-iname 'readme*' \
+				"(" -name '*.md' -o -name '*.txt' -o -iname 'readme' ")" \
+		| LC_ALL=C sort | head -n 1 )"
+	set -e
+
+	if [ -z "${fname}" ] ; then
+		show_error "Could not find README file in \"${TOP_LEVEL_DIR}\""
+		return 1
+	fi
+	if ! [ -s "${fname}" ] ; then
+		show_error "README file is empty \"${fname}\""
+		return 1
+	fi
+
+	README_FILE="${fname}"
+	return 0
+}
+
+##
 ## Parse ChangeLog file
 ##
 
@@ -548,6 +583,52 @@ parse_changelog_file()
 }
 
 ##
+## Parse README file
+##
+
+parse_readme_file()
+{
+	local heading_line=""
+
+	if [ "${DONE_PARSE_README_FILE:-}" ] ; then
+		return 0
+	fi
+
+	if ! find_readme_file ; then
+		return 1
+	fi
+
+	##      Top level heading
+	##      ===================
+
+	if [ -z "${heading_line}" ] ; then
+		heading_line="$( head -n 15 "${README_FILE}" \
+				| sed_filter_out_whitespace \
+				| grep -E -B 1 '^[=]{5,}$' \
+				| head -n 1 )"
+	fi
+
+	##      # Top level heading
+
+	if [ -z "${heading_line}" ] ; then
+		heading_line="$( head -n 15 "${README_FILE}" \
+				| sed_filter_out_whitespace \
+				| grep -E "^# " \
+				| head -n 1 | sed -e "s/^# //;" )"
+	fi
+
+	if [ -z "${heading_line}" ] ; then
+		show_error "Could not parse README file"
+		return 1
+	fi
+
+	BID_PROJECT_DESC="${heading_line}"
+	DONE_PARSE_README_FILE=y
+
+	return 0
+}
+
+##
 ## Handlers
 ##
 
@@ -575,6 +656,9 @@ handler_build_info_full()
 	if ! run_date_format ; then
 		return 1
 	fi
+	if ! parse_readme_file ; then
+		return 1
+	fi
 
 	if [ "${buildinfo_type}" = full ] ; then
 		if ! run_git_log_201 ; then
@@ -586,7 +670,7 @@ handler_build_info_full()
 	fi
 
 	cat <<__EOF__
-# Build information for ${OPT_PROJECT_NAME}
+# Build information for ${BID_PROJECT_DESC}
 
 ${PROJECT_NAME_PREFIX}_BUILD_NUMBER="${build_num}"
 ${PROJECT_NAME_PREFIX}_COMMIT_ID="${BID_COMMIT_ID_FULL}"
@@ -736,6 +820,16 @@ handler_print_all()
 		echo "[${ret_val}]"
 	done
 
+	return 0
+}
+
+handler_project_description()
+{
+	if ! parse_readme_file ; then
+		return 1
+	fi
+
+	echo "${BID_PROJECT_DESC}"
 	return 0
 }
 
