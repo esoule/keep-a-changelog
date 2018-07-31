@@ -36,6 +36,7 @@ date-safe-str
 date-str
 print-all
 repo-url
+version-str
 "
 
 LIST_ITEMS="$( echo ${LIST_ITEMS} )"
@@ -45,12 +46,15 @@ unset BID_DATE_EPOCH
 unset BID_DATE_SAFE_STR BID_DATE_STR BID_DATE_C_DATE_STR BID_DATE_C_TIME_STR
 unset BID_REPO_URL
 unset BID_COMMITTER_NAME BID_COMMIT_SUBJECT
+unset BID_VERSION_STR
 
 unset ITEM_HANDLER_FUNC
 
 unset TOP_LEVEL_DIR
 
 unset PROJECT_NAME_PREFIX
+
+unset CHANGELOG_FILE
 
 exit_handler()
 {
@@ -295,9 +299,19 @@ run_git_log_101()
 	return 0
 }
 
+sed_filter_out_whitespace()
+{
+	sed -e "s/[ \\t]\+/ /g; s/[ ]\$//; s/^[ ]//; /^$/d;"
+}
+
 sed_filter_value()
 {
 	sed -e "s/[ \\t]\+/ /g; s/[ ]\$//; s/^[ ]//; s/\\\"/'/g; /^$/d;"
+}
+
+grep_line_version_date()
+{
+	grep -E "^${1:-}[^ ]+ [-] [1-9][0-9][0-9][0-9][-][0-9][0-9][-][0-9][0-9]( [0-9][0-9]:[0-9][0-9]:[0-9][0-9]| [0-9][0-9]:[0-9][0-9]|)\$"
 }
 
 ##
@@ -431,6 +445,105 @@ run_git_remote_repo_url()
 
 	BID_REPO_URL="${repo_url}"
 	DONE_RUN_GIT_REMOTE_REPO_URL=y
+	return 0
+}
+
+##
+## Find ChangeLog file in project
+##
+
+find_changelog_file()
+{
+	local docdirs
+	local fname
+
+	if [ -n "${CHANGELOG_FILE:-}" ] ; then
+		return 0
+	fi
+
+	set +e
+	fname="$( find "${TOP_LEVEL_DIR}" -mindepth 1 -maxdepth 1 -type f \
+				-iname 'changelog*' \
+				"(" -name '*.md' -o -name '*.txt' -o -iname 'changelog' ")" \
+		| LC_ALL=C sort | head -n 1 )"
+
+	if [ -z "${fname}" ] ; then
+		docdirs="$( find "${TOP_LEVEL_DIR}" -mindepth 1 -maxdepth 1 -type d \
+					"(" -iname 'documentation' -o -iname 'docs' -o -iname 'doc' ")" \
+				| LC_ALL=C sort )"
+		if [ -n "${docdirs}" ] ; then
+			fname="$( find ${docdirs} -mindepth 1 -maxdepth 1 -type f \
+					-iname 'changelog*' \
+					"(" -name '*.md' -o -name '*.txt' -o -iname 'changelog' ")" \
+			| LC_ALL=C sort | head -n 1 )"
+		fi
+	fi
+	set -e
+
+	if [ -z "${fname}" ] ; then
+		show_error "Could not find ChangeLog file in \"${TOP_LEVEL_DIR}\""
+		return 1
+	fi
+	if ! [ -s "${fname}" ] ; then
+		show_error "ChangeLog file is empty \"${fname}\""
+		return 1
+	fi
+
+	CHANGELOG_FILE="${fname}"
+	return 0
+}
+
+##
+## Parse ChangeLog file
+##
+
+parse_changelog_file()
+{
+	local heading_line=""
+	local ver_str
+
+	if [ "${DONE_PARSE_CHANGELOG_FILE:-}" ] ; then
+		return 0
+	fi
+
+	if ! find_changelog_file ; then
+		return 1
+	fi
+
+	##      VERSION - DATE
+	##      ----------------
+
+	if [ -z "${heading_line}" ] ; then
+		heading_line="$( head -n 30 "${CHANGELOG_FILE}" \
+				| sed_filter_out_whitespace \
+				| grep -E -B 1 '^[-]{12,}$' \
+				| grep_line_version_date "" \
+				| head -n 1 )"
+	fi
+
+	##      ## VERSION - DATE
+
+	if [ -z "${heading_line}" ] ; then
+		heading_line="$( head -n 30 "${CHANGELOG_FILE}" \
+				| sed_filter_out_whitespace \
+				| grep_line_version_date "## " \
+				| head -n 1 | sed -e "s/^## //;" )"
+	fi
+
+	ver_str="$( echo "${heading_line}" | cut -d ' ' -f 1 | head -n 1 | sed -e "s/^\\[\([^ ]\+\)\\]/\\1/;" )"
+
+	if [ -n "${SOURCE_X_VERSION:-}" ] ; then
+		ver_str="${SOURCE_X_VERSION}"
+	fi
+
+	if [ -z "${ver_str}" ] ; then
+		show_error "Could not parse version from ChangeLog file"
+		return 1
+	fi
+
+	BID_VERSION_STR="${ver_str}"
+	DONE_PARSE_CHANGELOG_FILE=y
+
 	return 0
 }
 
@@ -633,6 +746,16 @@ handler_repo_url()
 	fi
 
 	echo "${BID_REPO_URL}"
+	return 0
+}
+
+handler_version_str()
+{
+	if ! parse_changelog_file ; then
+		return 1
+	fi
+
+	echo "${BID_VERSION_STR}"
 	return 0
 }
 
