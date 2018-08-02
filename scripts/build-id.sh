@@ -565,7 +565,7 @@ parse_changelog_file()
 				| head -n 1 | sed -e "s/^## //;" )"
 	fi
 
-	ver_str="$( echo "${heading_line}" | cut -d ' ' -f 1 | head -n 1 | sed -e "s/^\\[\([^ ]\+\)\\]/\\1/;" )"
+	ver_str="$( echo "${heading_line}" | awk '{ print $1 }' | head -n 1 | sed -e "s/^\\[\([^ ]\+\)\\]/\\1/;" )"
 
 	if [ -n "${SOURCE_X_VERSION:-}" ] ; then
 		ver_str="${SOURCE_X_VERSION}"
