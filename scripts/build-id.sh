@@ -24,6 +24,9 @@ OPT_PROJECT_NAME=""
 ## Read Markdown ChangeLog from FILE
 OPT_CHANGELOG_FILE=""
 
+## Read Markdown README from FILE
+OPT_README_FILE=""
+
 ## Item
 OPT_ITEM=""
 
@@ -93,6 +96,7 @@ Options:
     -f FILE             Write information to FILE
     -n PROJECTNAME      Specify project name
     -c FILE             Read Markdown ChangeLog from FILE
+    -r FILE             Read Markdown README from FILE
 
 Possible items:
 
@@ -147,7 +151,7 @@ parse_options()
 	fi
 
 	ret_val=0
-	while getopts "c:d:f:hn:" OPTION ; do
+	while getopts "c:d:f:hn:r:" OPTION ; do
 		case "${OPTION}" in
 		c)
 			if [ -n "${OPTARG}" ] && [ -f "${OPTARG}" ] ; then
@@ -179,6 +183,14 @@ parse_options()
 			else
 				show_error "Invalid project name"
 				ret_val=72
+			fi
+			;;
+		r)
+			if [ -n "${OPTARG}" ] && [ -f "${OPTARG}" ] ; then
+				OPT_README_FILE="${OPTARG}"
+			else
+				show_error "Invalid README file name"
+				ret_val=75
 			fi
 			;;
 		h)
@@ -518,22 +530,39 @@ find_changelog_file()
 
 find_readme_file()
 {
-	local fname
+	local fname=""
 
 	if [ -n "${B_FILE_README:-}" ] ; then
 		return 0
 	fi
 
-	set +e
-	fname="$( find "${TOP_LEVEL_DIR}" -mindepth 1 -maxdepth 1 -type f \
-				-iname 'readme.md' \
-		| LC_ALL=C sort | head -n 1 )"
-	set -e
+	if [ -n "${OPT_README_FILE}" ] ; then
+		## Get README.md filename from command line
+		fname="${OPT_README_FILE}"
+	fi
 
 	if [ -z "${fname}" ] ; then
-		show_error "Could not find README.md file in \"${TOP_LEVEL_DIR}\""
+		set +e
+		fname="$( find "${TOP_LEVEL_DIR}" -mindepth 1 -maxdepth 1 -type f \
+					-iname 'readme.md' \
+			| LC_ALL=C sort | head -n 1 )"
+		set -e
+		if [ -z "${fname}" ] ; then
+			show_error "Could not find README.md file in \"${TOP_LEVEL_DIR}\""
+			return 1
+		fi
+	fi
+
+	if ! [ -f "${fname}" ] ; then
+		show_error "README file is not found, \"${fname}\""
 		return 1
 	fi
+
+	if ! [ -r "${fname}" ] ; then
+		show_error "README file is not found, \"${fname}\""
+		return 1
+	fi
+
 	if ! [ -s "${fname}" ] ; then
 		show_error "README file is empty \"${fname}\""
 		return 1
