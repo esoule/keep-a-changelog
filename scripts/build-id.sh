@@ -497,13 +497,12 @@ find_readme_file()
 
 	set +e
 	fname="$( find "${TOP_LEVEL_DIR}" -mindepth 1 -maxdepth 1 -type f \
-				-iname 'readme*' \
-				"(" -name '*.md' -o -name '*.txt' -o -iname 'readme' ")" \
+				-iname 'readme.md' \
 		| LC_ALL=C sort | head -n 1 )"
 	set -e
 
 	if [ -z "${fname}" ] ; then
-		show_error "Could not find README file in \"${TOP_LEVEL_DIR}\""
+		show_error "Could not find README.md file in \"${TOP_LEVEL_DIR}\""
 		return 1
 	fi
 	if ! [ -s "${fname}" ] ; then
