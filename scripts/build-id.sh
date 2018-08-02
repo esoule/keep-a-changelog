@@ -6,6 +6,7 @@
 
 set -u
 set -e
+set -f
 PROGNAME="$( basename "$0" )"
 
 ## Caller wants usage (-h)
