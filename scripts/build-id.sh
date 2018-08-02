@@ -458,7 +458,6 @@ run_git_remote_repo_url()
 
 find_changelog_file()
 {
-	local docdirs
 	local fname
 
 	if [ -n "${B_FILE_CHANGELOG:-}" ] ; then
@@ -467,25 +466,12 @@ find_changelog_file()
 
 	set +e
 	fname="$( find "${TOP_LEVEL_DIR}" -mindepth 1 -maxdepth 1 -type f \
-				-iname 'changelog*' \
-				"(" -name '*.md' -o -name '*.txt' -o -iname 'changelog' ")" \
+				-iname 'changelog.md' \
 		| LC_ALL=C sort | head -n 1 )"
-
-	if [ -z "${fname}" ] ; then
-		docdirs="$( find "${TOP_LEVEL_DIR}" -mindepth 1 -maxdepth 1 -type d \
-					"(" -iname 'documentation' -o -iname 'docs' -o -iname 'doc' ")" \
-				| LC_ALL=C sort )"
-		if [ -n "${docdirs}" ] ; then
-			fname="$( find ${docdirs} -mindepth 1 -maxdepth 1 -type f \
-					-iname 'changelog*' \
-					"(" -name '*.md' -o -name '*.txt' -o -iname 'changelog' ")" \
-			| LC_ALL=C sort | head -n 1 )"
-		fi
-	fi
 	set -e
 
 	if [ -z "${fname}" ] ; then
-		show_error "Could not find ChangeLog file in \"${TOP_LEVEL_DIR}\""
+		show_error "Could not find ChangeLog.md file in \"${TOP_LEVEL_DIR}\""
 		return 1
 	fi
 	if ! [ -s "${fname}" ] ; then
