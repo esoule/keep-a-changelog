@@ -21,6 +21,9 @@ OPT_OUT_FILE=""
 ## Project name specified by caller
 OPT_PROJECT_NAME=""
 
+## Read Markdown ChangeLog from FILE
+OPT_CHANGELOG_FILE=""
+
 ## Item
 OPT_ITEM=""
 
@@ -89,6 +92,7 @@ Options:
     -d DIRECTORY        Get information for DIRECTORY
     -f FILE             Write information to FILE
     -n PROJECTNAME      Specify project name
+    -c FILE             Read Markdown ChangeLog from FILE
 
 Possible items:
 
@@ -143,8 +147,16 @@ parse_options()
 	fi
 
 	ret_val=0
-	while getopts "d:f:hn:" OPTION ; do
+	while getopts "c:d:f:hn:" OPTION ; do
 		case "${OPTION}" in
+		c)
+			if [ -n "${OPTARG}" ] && [ -f "${OPTARG}" ] ; then
+				OPT_CHANGELOG_FILE="${OPTARG}"
+			else
+				show_error "Invalid ChangeLog file name"
+				ret_val=74
+			fi
+			;;
 		d)
 			if [ -n "${OPTARG}" ] && [ -d "${OPTARG}" ] ; then
 				OPT_DIRECTORY="${OPTARG}"
@@ -458,22 +470,39 @@ run_git_remote_repo_url()
 
 find_changelog_file()
 {
-	local fname
+	local fname=""
 
 	if [ -n "${B_FILE_CHANGELOG:-}" ] ; then
 		return 0
 	fi
 
-	set +e
-	fname="$( find "${TOP_LEVEL_DIR}" -mindepth 1 -maxdepth 1 -type f \
-				-iname 'changelog.md' \
-		| LC_ALL=C sort | head -n 1 )"
-	set -e
+	if [ -n "${OPT_CHANGELOG_FILE}" ] ; then
+		## Get ChangeLog.md filename from command line
+		fname="${OPT_CHANGELOG_FILE}"
+	fi
 
 	if [ -z "${fname}" ] ; then
-		show_error "Could not find ChangeLog.md file in \"${TOP_LEVEL_DIR}\""
+		set +e
+		fname="$( find "${TOP_LEVEL_DIR}" -mindepth 1 -maxdepth 1 -type f \
+					-iname 'changelog.md' \
+			| LC_ALL=C sort | head -n 1 )"
+		set -e
+		if [ -z "${fname}" ] ; then
+			show_error "Could not find ChangeLog.md file in \"${TOP_LEVEL_DIR}\""
+			return 1
+		fi
+	fi
+
+	if ! [ -f "${fname}" ] ; then
+		show_error "ChangeLog file is not found, \"${fname}\""
 		return 1
 	fi
+
+	if ! [ -r "${fname}" ] ; then
+		show_error "ChangeLog file is not found, \"${fname}\""
+		return 1
+	fi
+
 	if ! [ -s "${fname}" ] ; then
 		show_error "ChangeLog file is empty \"${fname}\""
 		return 1
