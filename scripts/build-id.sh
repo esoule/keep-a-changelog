@@ -30,6 +30,10 @@ OPT_README_FILE=""
 ## Item
 OPT_ITEM=""
 
+## Variables from .build-id.conf
+CHANGELOG_FILE=""
+README_FILE=""
+
 ## List of possible items
 LIST_ITEMS="
 build-info-brief
@@ -102,6 +106,15 @@ Possible items:
 
 __EOF__
 	echo "${LIST_ITEMS}" | tr ' ' '\012' | LC_COLLATE=C sort | sed -e 's/^/    /'    >&2
+
+	cat <<__EOF__ >&2
+
+File .build-id.conf at Git repository root supports the following
+variables:
+
+    CHANGELOG_FILE      Markdown ChangeLog file
+    README_FILE         Markdown README file
+__EOF__
 
 	if [ "${arg1}" != 0 ] ; then
 		exit "${arg1}"
@@ -263,6 +276,26 @@ locate_top_level_dir()
 	PROJECT_NAME_PREFIX="$( echo "${OPT_PROJECT_NAME^^}" | sed -e 's/[^A-Za-z0-9_]/_/g' )"
 
 	return 0
+}
+
+##
+## Read project config file from top level git directory
+##
+
+read_project_config_file()
+{
+	local file_exist=""
+	local config_file="${TOP_LEVEL_DIR}/.build-id.conf"
+
+	if [ -f "${config_file}" ] && [ -r "${config_file}" ] ; then
+		file_exist=Y
+	fi
+
+	if ! [ "${file_exist}" ] ; then
+		return 0
+	fi
+
+	source "${config_file}"
 }
 
 ##
@@ -488,6 +521,11 @@ find_changelog_file()
 		return 0
 	fi
 
+	if [ -n "${CHANGELOG_FILE:-}" ] ; then
+		## Get ChangeLog.md filename from .build-id.conf
+		fname="${TOP_LEVEL_DIR}/${CHANGELOG_FILE}"
+	fi
+
 	if [ -n "${OPT_CHANGELOG_FILE}" ] ; then
 		## Get ChangeLog.md filename from command line
 		fname="${OPT_CHANGELOG_FILE}"
@@ -534,6 +572,11 @@ find_readme_file()
 
 	if [ -n "${B_FILE_README:-}" ] ; then
 		return 0
+	fi
+
+	if [ -n "${README_FILE:-}" ] ; then
+		## Get README.md filename from .build-id.conf
+		fname="${TOP_LEVEL_DIR}/${README_FILE}"
 	fi
 
 	if [ -n "${OPT_README_FILE}" ] ; then
@@ -1007,6 +1050,11 @@ build_id_main()
 
 	if ! locate_top_level_dir ; then
 		show_error "Could not locate top level git directory"
+		exit 1
+	fi
+
+	if ! read_project_config_file ; then
+		show_error "Could not read project config file from top level git directory"
 		exit 1
 	fi
 
