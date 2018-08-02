@@ -57,8 +57,8 @@ unset TOP_LEVEL_DIR
 
 unset PROJECT_NAME_PREFIX
 
-unset CHANGELOG_FILE
-unset README_FILE
+unset B_FILE_CHANGELOG
+unset B_FILE_README
 
 exit_handler()
 {
@@ -461,7 +461,7 @@ find_changelog_file()
 	local docdirs
 	local fname
 
-	if [ -n "${CHANGELOG_FILE:-}" ] ; then
+	if [ -n "${B_FILE_CHANGELOG:-}" ] ; then
 		return 0
 	fi
 
@@ -493,7 +493,7 @@ find_changelog_file()
 		return 1
 	fi
 
-	CHANGELOG_FILE="${fname}"
+	B_FILE_CHANGELOG="${fname}"
 	return 0
 }
 
@@ -505,7 +505,7 @@ find_readme_file()
 {
 	local fname
 
-	if [ -n "${README_FILE:-}" ] ; then
+	if [ -n "${B_FILE_README:-}" ] ; then
 		return 0
 	fi
 
@@ -525,7 +525,7 @@ find_readme_file()
 		return 1
 	fi
 
-	README_FILE="${fname}"
+	B_FILE_README="${fname}"
 	return 0
 }
 
@@ -550,7 +550,7 @@ parse_changelog_file()
 	##      ----------------
 
 	if [ -z "${heading_line}" ] ; then
-		heading_line="$( head -n 30 "${CHANGELOG_FILE}" \
+		heading_line="$( head -n 30 "${B_FILE_CHANGELOG}" \
 				| sed_filter_out_whitespace \
 				| grep -E -B 1 '^[-]{12,}$' \
 				| grep_line_version_date "" \
@@ -560,7 +560,7 @@ parse_changelog_file()
 	##      ## VERSION - DATE
 
 	if [ -z "${heading_line}" ] ; then
-		heading_line="$( head -n 30 "${CHANGELOG_FILE}" \
+		heading_line="$( head -n 30 "${B_FILE_CHANGELOG}" \
 				| sed_filter_out_whitespace \
 				| grep_line_version_date "## " \
 				| head -n 1 | sed -e "s/^## //;" )"
@@ -603,7 +603,7 @@ parse_readme_file()
 	##      ===================
 
 	if [ -z "${heading_line}" ] ; then
-		heading_line="$( head -n 15 "${README_FILE}" \
+		heading_line="$( head -n 15 "${B_FILE_README}" \
 				| sed_filter_out_whitespace \
 				| grep -E -B 1 '^[=]{5,}$' \
 				| head -n 1 )"
@@ -612,7 +612,7 @@ parse_readme_file()
 	##      # Top level heading
 
 	if [ -z "${heading_line}" ] ; then
-		heading_line="$( head -n 15 "${README_FILE}" \
+		heading_line="$( head -n 15 "${B_FILE_README}" \
 				| sed_filter_out_whitespace \
 				| grep -E "^# " \
 				| head -n 1 | sed -e "s/^# //;" )"
