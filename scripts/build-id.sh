@@ -743,6 +743,9 @@ handler_build_info_full()
 	if ! run_date_format ; then
 		return 1
 	fi
+	if ! parse_changelog_file ; then
+		return 1
+	fi
 	if ! parse_readme_file ; then
 		return 1
 	fi
@@ -759,6 +762,7 @@ handler_build_info_full()
 	cat <<__EOF__
 # Build information for ${BID_PROJECT_DESC}
 
+${PROJECT_NAME_PREFIX}_VERSION_STR="${BID_VERSION_STR}"
 ${PROJECT_NAME_PREFIX}_BUILD_NUMBER="${build_num}"
 ${PROJECT_NAME_PREFIX}_COMMIT_ID="${BID_COMMIT_ID_FULL}"
 ${PROJECT_NAME_PREFIX}_COMMITTER_DATE="${BID_DATE_STR}"
