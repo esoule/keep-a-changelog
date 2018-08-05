@@ -690,8 +690,8 @@ parse_readme_file()
 
 	if [ -z "${heading_line}" ] ; then
 		heading_line="$( head -n 15 "${B_FILE_README}" \
+				| grep -E -B 1 "^[=]{10,}\\s*\$" \
 				| sed_filter_out_whitespace \
-				| grep -E -B 1 '^[=]{5,}$' \
 				| head -n 1 )"
 	fi
 
@@ -699,8 +699,8 @@ parse_readme_file()
 
 	if [ -z "${heading_line}" ] ; then
 		heading_line="$( head -n 15 "${B_FILE_README}" \
+				| grep -E "^#\\s+\\S+" \
 				| sed_filter_out_whitespace \
-				| grep -E "^# " \
 				| head -n 1 | sed -e "s/^# //;" )"
 	fi
 
