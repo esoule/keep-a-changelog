@@ -892,7 +892,9 @@ handler_print_all()
 	local p_item
 	local p_handler
 	local ret_val
+	local ret_val_total
 
+	ret_val_total=0
 	for p_item in ${LIST_ITEMS} ; do
 		p_handler="handler_$( echo -n "${p_item}" | tr '-' '_' )"
 
@@ -913,7 +915,17 @@ handler_print_all()
 			ret_val=$?
 		fi
 		echo "[${ret_val}]"
+		if [ "${ret_val}" -ne 0 ] ; then
+			ret_val_total="${ret_val}"
+		fi
 	done
+
+	if [ "${ret_val_total}" -eq 0 ] ; then
+		show_debug "Return code [${ret_val_total}]"
+	else
+		show_error "Return code [${ret_val_total}]"
+	fi
+
 
 	return 0
 }
