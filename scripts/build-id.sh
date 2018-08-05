@@ -789,11 +789,15 @@ handler_c_header()
 	if ! run_date_format ; then
 		return 1
 	fi
+	if ! parse_changelog_file ; then
+		return 1
+	fi
 
 cat <<__EOF__
 /* Generated file, do not edit */
 /* Generated with build-id.sh c-header */
 
+#define _BUILD_VERSION_STR_		"${BID_VERSION_STR}"
 #define _BUILD_DATE_NUM_		${BID_DATE_EPOCH}
 #define _BUILD_DATE_STR_		"${BID_DATE_STR}"
 #define _BUILD_DATE_SAFE_STR_		"${BID_DATE_SAFE_STR}"
