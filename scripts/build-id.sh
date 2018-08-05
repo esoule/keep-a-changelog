@@ -372,7 +372,7 @@ sed_filter_value()
 
 grep_line_version_date()
 {
-	grep -E "^${1:-}[^ ]+ [-] [1-9][0-9][0-9][0-9][-][0-9][0-9][-][0-9][0-9]( [0-9][0-9]:[0-9][0-9]:[0-9][0-9]| [0-9][0-9]:[0-9][0-9]|)\$"
+	grep -E "^${1:-}\\S+\\s+[-]\\s+[1-9][0-9][0-9][0-9][-][0-9][0-9][-][0-9][0-9](\\s+[0-9][0-9]:[0-9][0-9]:[0-9][0-9]|\\s+[0-9][0-9]:[0-9][0-9]|)\\s*\$"
 }
 
 ##
@@ -637,9 +637,9 @@ parse_changelog_file()
 
 	if [ -z "${heading_line}" ] ; then
 		heading_line="$( head -n 50 "${B_FILE_CHANGELOG}" \
-				| sed_filter_out_whitespace \
-				| grep -E -B 1 '^[-]{12,}$' \
+				| grep -E -B 1 "^[-]{12,}\\s*\$" \
 				| grep_line_version_date "" \
+				| sed_filter_out_whitespace \
 				| head -n 1 )"
 	fi
 
@@ -647,8 +647,8 @@ parse_changelog_file()
 
 	if [ -z "${heading_line}" ] ; then
 		heading_line="$( head -n 50 "${B_FILE_CHANGELOG}" \
+				| grep_line_version_date "##\\s+" \
 				| sed_filter_out_whitespace \
-				| grep_line_version_date "## " \
 				| head -n 1 | sed -e "s/^## //;" )"
 	fi
 
