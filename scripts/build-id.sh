@@ -8,9 +8,13 @@ set -u
 set -e
 set -f
 PROGNAME="$( basename "$0" )"
+PROGRAM_VERSION="1.0.0"
 
 ## Caller wants usage (-h)
 OPT_WANT_USAGE=""
+
+## Caller wants version of this script (-V)
+OPT_WANT_PROGRAM_VERSION=""
 
 ## Get information for directory (-d)
 OPT_DIRECTORY="."
@@ -85,6 +89,13 @@ exit_handler()
 
 trap 'exit_handler "$?" "$0"' EXIT
 
+show_program_version()
+{
+	set +x
+	echo "${PROGNAME} version ${PROGRAM_VERSION}"
+	return 0
+}
+
 show_usage()
 {
 	set +x
@@ -101,6 +112,7 @@ Options:
     -n PROJECTNAME      Specify project name
     -c FILE             Read Markdown ChangeLog from FILE
     -r FILE             Read Markdown README from FILE
+    -V                  Print version of this script and exit
 
 Possible items:
 
@@ -164,7 +176,7 @@ parse_options()
 	fi
 
 	ret_val=0
-	while getopts "c:d:f:hn:r:" OPTION ; do
+	while getopts "c:d:f:hVn:r:" OPTION ; do
 		case "${OPTION}" in
 		c)
 			if [ -n "${OPTARG}" ] && [ -f "${OPTARG}" ] ; then
@@ -208,6 +220,9 @@ parse_options()
 			;;
 		h)
 			OPT_WANT_USAGE=y
+			;;
+		V)
+			OPT_WANT_PROGRAM_VERSION=y
 			;;
 		'?')
 			ret_val=79
@@ -1058,6 +1073,11 @@ build_id_main()
 
 	if [ -n "${OPT_WANT_USAGE}" ] ; then
 		show_usage 0
+		exit 0
+	fi
+
+	if [ -n "${OPT_WANT_PROGRAM_VERSION}" ] ; then
+		show_program_version
 		exit 0
 	fi
 
