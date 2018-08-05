@@ -636,7 +636,7 @@ parse_changelog_file()
 	##      ----------------
 
 	if [ -z "${heading_line}" ] ; then
-		heading_line="$( head -n 30 "${B_FILE_CHANGELOG}" \
+		heading_line="$( head -n 50 "${B_FILE_CHANGELOG}" \
 				| sed_filter_out_whitespace \
 				| grep -E -B 1 '^[-]{12,}$' \
 				| grep_line_version_date "" \
@@ -646,7 +646,7 @@ parse_changelog_file()
 	##      ## VERSION - DATE
 
 	if [ -z "${heading_line}" ] ; then
-		heading_line="$( head -n 30 "${B_FILE_CHANGELOG}" \
+		heading_line="$( head -n 50 "${B_FILE_CHANGELOG}" \
 				| sed_filter_out_whitespace \
 				| grep_line_version_date "## " \
 				| head -n 1 | sed -e "s/^## //;" )"
