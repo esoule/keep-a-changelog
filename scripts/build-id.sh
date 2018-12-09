@@ -289,7 +289,7 @@ locate_top_level_dir()
 		OPT_PROJECT_NAME="$( basename "${top_dir}" )"
 	fi
 
-	PROJECT_NAME_PREFIX="$( echo "${OPT_PROJECT_NAME^^}" | sed -e 's/[^A-Za-z0-9_]/_/g' )"
+	PROJECT_NAME_PREFIX="$( echo "${OPT_PROJECT_NAME}" | LC_COLLATE=C tr 'a-z' 'A-Z' | LC_COLLATE=C sed -e 's/[^A-Za-z0-9_]/_/g' )"
 
 	return 0
 }
