@@ -55,7 +55,8 @@ repo-url
 version-str
 "
 
-LIST_ITEMS="$( echo ${LIST_ITEMS} )"
+## convert to space-separated list
+LIST_ITEMS="$( echo "${LIST_ITEMS}" | tr ' \011\012' '   ' | sed -e 's/\s\+/ /g; s/^\s\+//; s/\s\+$//;' )"
 
 unset BID_COMMIT_ID_FULL BID_COMMIT_ID_ABBREV
 unset BID_DATE_EPOCH
