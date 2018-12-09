@@ -251,7 +251,7 @@ parse_item_to_print()
 		return 82
 	fi
 
-	ITEM_HANDLER_FUNC="handler_$( echo -n "${OPT_ITEM}" | tr '-' '_' )"
+	ITEM_HANDLER_FUNC="handler_$( printf '%s' "${OPT_ITEM}" | tr '-' '_' )"
 
 	if ! [ "$( type -t "${ITEM_HANDLER_FUNC}" )" = function ] ; then
 		show_error "Unrecognized item \"${OPT_ITEM}\" [2]"
@@ -911,7 +911,7 @@ handler_print_all()
 
 	ret_val_total=0
 	for p_item in ${LIST_ITEMS} ; do
-		p_handler="handler_$( echo -n "${p_item}" | tr '-' '_' )"
+		p_handler="handler_$( printf '%s' "${p_item}" | tr '-' '_' )"
 
 		if ! [ "$( type -t "${p_handler}" )" = function ] ; then
 			show_error "Unrecognized item \"${p_item}\" [3]"
