@@ -8,7 +8,7 @@ set -u
 set -e
 set -f
 PROGNAME="$( basename "$0" )"
-PROGRAM_VERSION="1.0.0"
+PROGRAM_VERSION="1.0.1"
 
 ## Caller wants usage (-h)
 OPT_WANT_USAGE=""
@@ -46,6 +46,9 @@ c-header
 c-header-u-boot-1-2-timestamp
 commit-id
 commit-id-abbrev
+cpp-date-str
+cpp-date-time-str
+cpp-time-str
 date-epoch
 date-safe-str
 date-str
@@ -468,7 +471,7 @@ run_date_format()
 		return 1
 	fi
 
-	date_c_date_str="$( TZ=UTC LANG=C LC_ALL=C date -u -d "@${BID_DATE_EPOCH}" '+%b %d %Y' )"
+	date_c_date_str="$( TZ=UTC LANG=C LC_ALL=C date -u -d "@${BID_DATE_EPOCH}" '+%b %e %Y' )"
 	if [ -z "${date_c_date_str}" ] ; then
 		return 1
 	fi
@@ -821,6 +824,9 @@ cat <<__EOF__
 #define _BUILD_DATE_NUM_		${BID_DATE_EPOCH}
 #define _BUILD_DATE_STR_		"${BID_DATE_STR}"
 #define _BUILD_DATE_SAFE_STR_		"${BID_DATE_SAFE_STR}"
+#define _BUILD_CPP_DATE_STR_		"${BID_DATE_C_DATE_STR}"
+#define _BUILD_CPP_TIME_STR_		"${BID_DATE_C_TIME_STR}"
+#define _BUILD_CPP_DATE_TIME_STR_	"${BID_DATE_C_DATE_STR} ${BID_DATE_C_TIME_STR}"
 #define _BUILD_COMMIT_ID_		"${BID_COMMIT_ID_ABBREV}"
 __EOF__
 
@@ -864,6 +870,45 @@ handler_commit_id_abbrev()
 	fi
 
 	echo "${BID_COMMIT_ID_ABBREV}"
+	return 0
+}
+
+handler_cpp_date_str()
+{
+	if ! run_git_log_101 ; then
+		return 1
+	fi
+	if ! run_date_format ; then
+		return 1
+	fi
+
+	echo "${BID_DATE_C_DATE_STR}"
+	return 0
+}
+
+handler_cpp_date_time_str()
+{
+	if ! run_git_log_101 ; then
+		return 1
+	fi
+	if ! run_date_format ; then
+		return 1
+	fi
+
+	echo "${BID_DATE_C_DATE_STR} ${BID_DATE_C_TIME_STR}"
+	return 0
+}
+
+handler_cpp_time_str()
+{
+	if ! run_git_log_101 ; then
+		return 1
+	fi
+	if ! run_date_format ; then
+		return 1
+	fi
+
+	echo "${BID_DATE_C_TIME_STR}"
 	return 0
 }
 
